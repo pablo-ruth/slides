@@ -8,9 +8,9 @@
 * A product from Hashicorp
 * Written in Go
 * Single binary
-* Current version 0.9.5 (26/02/2018)
+* Current version 0.10.1 (26/04/2018)
 * Actively developed
-* +8600 stars on Github
+* +9000 stars on Github
 
 
 ## Why Vault
@@ -66,6 +66,10 @@
 
 
 
+## Architecture
+![vault_arch](img/vault/vault-arch.png)
+
+
 ## 4 types of backend
 
 
@@ -95,7 +99,7 @@
 * User oriented
   * User/Pass, LDAP, Github
 * Machine oriented
-  * AppRole, AWS EC2
+  * AppRole, AWS EC2, Kubernetes
 
 
 ## Secret backend
@@ -122,6 +126,26 @@
 
 * File
 * Syslog
+
+
+
+## Threat model
+
+
+### In scope
+
+* Eavesdropping on any Vault communication (client, storage backend)
+* Tampering with data at rest or in transit
+* Access to data or controls without authentication or authorization
+* Access to data or controls without accountability
+* Availability of secret material in the face of failure
+
+
+### Out scope
+
+* Protecting against arbitrary control of the storage backend
+* Protecting against the leakage of the existence of secret material
+* Protecting against memory analysis of a running Vault
 
 
 
@@ -158,7 +182,7 @@ vault server -config=/etc/vault/config.hcl
                Log Level: info
                    Mlock: supported: true, enabled: true
                  Storage: file
-                 Version: Vault v0.7.0
+                 Version: Vault v0.10.0
              Version Sha: 614deacfca3f3b7162bbf30a36d6fc7362cd47f0
 ```
 
@@ -217,7 +241,7 @@ $ vault init -key-shares=3 -key-threshold=2 \
 ## Unseal
 
 ```
-$ vault unseal
+$ vault operator unseal
 Key (will be hidden): 
 ```
 ```
@@ -228,7 +252,7 @@ Unseal Progress: 1
 Unseal Nonce: 04130de4-08d5-8dc0-d0c9-684c2cb3cc18
 ```
 ```
-$ vault unseal
+$ vault operator unseal
 Key (will be hidden): 
 ```
 ```
@@ -249,7 +273,7 @@ Unseal Progress: 0
 ## Seal
 
 ```
-$ vault seal
+$ vault operator seal
 ```
 ```
 Vault is now sealed.
@@ -267,11 +291,6 @@ Set Vault address for CLI
 export VAULT_ADDR="http://vault-server:8200"
 ```
 
-Disable proxy for CLI requests
-```
-alias vault="no_proxy=\"*\" vault"
-```
-
 
 ## Get vault status
 
@@ -284,7 +303,7 @@ Key Shares: 5
 Key Threshold: 3
 Unseal Progress: 0
 Unseal Nonce: 
-Version: 0.7.0
+Version: 0.10.0
 Cluster Name: vault-cluster-c209a2b2
 Cluster ID: 95fd6576-9e55-52b9-5c6f-017f57fbbeab
 
@@ -368,7 +387,7 @@ Success! Deleted 'secret/password' if it existed.
 ## Mount secret backend
 If path is not specified, default to backend name
 ```
-$ vault mount -path=/anothergenericbackend generic
+$ vault secrets enable -path=/anothergenericbackend generic
 ```
 ```
 Successfully mounted 'generic' at '/anothergenericbackend'!
@@ -456,7 +475,7 @@ token_policies: [root]
 * Log every single action in Vault
 
 ```
-$ vault audit-enable file file_path=/var/log/vault_audit.log
+$ vault audit enable file file_path=/var/log/vault_audit.log
 ```
 
 
@@ -509,12 +528,208 @@ path "auth/token/lookup-self" {
 Import a policy in Vault
 
 ```
-$ vault policy-write secret secret.hcl
+$ vault policy write secret secret.hcl
 ```
 
 Apply a policy to LDAP group
 ```
 $ vault write auth/ldap/groups/myldapgroup policies=secret
+```
+
+
+
+## PKI
+
+
+## PKI secret backend
+
+* generate or import and store CA
+* generates X.509 certificates dynamically
+* services can get certificates without manual process
+* one CA == one backend
+* built-in support for CRL
+
+
+## Init CA
+
+Mount backend
+
+```
+$ vault mount pki
+```
+
+Generate or import CA
+
+```
+$ vault write interalca/root/generate/internal \
+        common_name=internalca ttl=87600h
+```
+
+
+## Create a role
+
+Logical name that maps to a policy
+
+```
+$ vault write internalca/roles/example-fr \
+    allowed_domains="example.fr" \
+    allow_subdomains="true" max_ttl="72h"
+```
+
+
+## Issue a certificate
+
+* Generate a private/public keys
+* Emit CSR
+* Sign certificate
+* Output all datas as JSON
+
+```
+$ vault write internalca/issue/example-fr \
+                        common_name=test.example.fr
+```
+
+
+
+## SSH
+
+
+## One-Time-Password
+
+* issue an OTP every time a client wants to SSH
+* remote host ask vault for verification 
+* vault helper for client/server
+* very detailed audit
+
+
+## SSH CA
+
+* Certificate authority for ssh
+* Can sign client and host keys
+* Openssh feature since 5.6 (08/2010)
+
+
+## CA architecture
+
+![ca architecture](img/vault/bastion-ca.png)
+
+
+## SSH CA
+
+* Used by big companies (Facebook, Netflix, ...)
+* Scalable
+  * No need for hosts to talk with CA
+* Single point of trust
+* Precise right management
+* Detailed audit
+
+
+## SSH CA
+
+* CA signing key is generated
+* private half of signing key stays within Vault
+* public half is exposed via the API
+* each mount represents a unique signing key pair
+* use different keys to sign hosts and clients
+
+
+## Sign client keys
+
+Mount SSH CA backend
+
+```
+$ vault mount -path ssh-client-signer ssh
+```
+
+Create CA keypair in Vault
+
+```
+$ vault write -f ssh-client-signer/config/ca
+```
+
+Push public CA cert to SSH hosts
+
+```
+$ vault read -field=public_key ssh/config/ca > /etc/ssh/ca.pem
+```
+
+Add *TrustedUserCAKeys* param to *sshd_config*
+
+```
+TrustedUserCAKeys /etc/ssh/ca.pem
+```
+
+
+## Create role
+
+Logical name that maps to a policy
+
+```
+vault write ssh-client-signer/roles/sign-user-role @clientrole.json
+```
+
+```
+{
+  "allow_user_certificates": true,
+  "allowed_users": "*",
+  "default_extensions": [
+    {
+      "no-agent-forwarding": "no"
+    }
+  ],
+  "key_type": "ca",
+  "default_user": "root",
+  "ttl": "30m0s"
+}
+```
+
+
+## Sign client keys
+
+* Sign client cert *id_rsa.pub*
+* Automatically detected by openssh in *id_rsa-cert.pub*
+* Principals auth default to username
+
+```
+$ vault write \
+  ssh/sign/sign-user-role 
+  valid_principals=root
+  ttl=1h
+  public_key=-
+```
+
+
+## Display certificate
+
+```
+$ ssh-keygen -Lf id_ecdsa-cert.pub
+id_ecdsa-cert.pub:
+  Type: ecdsa-sha2-nistp256-cert-v01@openssh.com user certificate
+  Public key: ECDSA-CERT ...
+  Signing CA: ECDSA ...
+  Key ID: "pruth"
+  Serial: 1
+  Valid: from 2017-04-13T15:26:00 to 2017-04-20T15:27:00
+  Principals:
+    root
+  Critical Options: (none)
+  Extensions:
+    permit-X11-forwarding
+    permit-agent-forwarding
+```
+
+
+## Advanced principals
+
+Allow arbitrary list of principals (zones) in *sshd_config*
+
+```
+AuthorizedPrincipalsFile /etc/ssh/auth_principals/%u
+```
+
+```
+$ echo -e 'zone-webservers\nroot-everywhere' > \
+                      /etc/ssh/auth_principals/root
 ```
 
 
