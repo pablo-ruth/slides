@@ -17,6 +17,7 @@
 
 * Manage infrastructure lifecycle
 * Cloud providers polyglot
+* IaC vs Configuration Management
 * Infrastructure as Code
   * Collaborative (versioning)
   * Automation friendly
@@ -49,6 +50,17 @@ $ tree example-module/
 
 
 
+## Providers
+
+* Core
+  * reading and interpolating config files 
+  * state management
+  * communication with plugins
+* Provider
+  * logical abstraction of an upstream API
+  * specific by service (AWS, vSphere, ...)
+
+
 ## Provider AWS
 
 * Access and secret key from **~/.aws/credentials**
@@ -59,10 +71,22 @@ $ tree example-module/
 provider "aws" {
   version = "~> 1.0.0"
   region     = "eu-west-1"
+}
+```
 
-  assume_role {
-    role_arn     = "arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME"
-  }
+
+## Provider vSphere
+
+* Required parameters ([docs](https://www.terraform.io/docs/providers/vsphere/index.html  ))
+* Fix version ([repo tags](https://github.com/terraform-providers/terraform-provider-vsphere))
+
+```
+provider "vsphere" {
+  version = "v1.8.1"
+  
+  vsphere_server = "https://vsphere.local"
+  user = "vsphereuser"
+  password = "vspherepass"
 }
 ```
 
@@ -297,4 +321,6 @@ resource "aws_instance" "foo" {
 
 
 
-# QUESTIONS ?
+## Atlantis
+
+https://www.runatlantis.io/
