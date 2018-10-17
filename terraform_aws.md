@@ -246,7 +246,7 @@ output "ip" {
 
 ## Using modules
 
-* Local source or git repo
+* Local source or git repo (use tags)
 * Customized vars
 * Loaded by **terraform get**
 
