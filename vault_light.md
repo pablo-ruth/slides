@@ -79,9 +79,9 @@
 ## Storage backend
 
 * Filesystem
+* Consul (HA and supported)
 * S3
 * Mysql
-* Consul (HA)
 * DynamoDB (HA)
 
 

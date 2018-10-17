@@ -24,9 +24,8 @@
 ## Vault goals
 
 * Single source of secrets
-* Programmatic application access
-* Operator access
-* Practical security
+* Full auditing
+* Programmatic access
 * Modern datacenter friendly (cloud)
 
 
@@ -63,6 +62,120 @@
 * Confd
 * AWS 
 * Docker
+
+
+
+## Basic CLI
+
+
+## Env
+
+Set Vault address for CLI
+```
+export VAULT_ADDR="http://vault-server:8200"
+```
+
+
+## Get vault status
+
+```
+$ vault status
+```
+```
+Sealed: false
+Key Shares: 5
+Key Threshold: 3
+Unseal Progress: 0
+Unseal Nonce: 
+Version: 0.10.0
+Cluster Name: vault-cluster-c209a2b2
+Cluster ID: 95fd6576-9e55-52b9-5c6f-017f57fbbeab
+
+High-Availability Enabled: false
+```
+
+
+## List mounted secret backends
+```
+$ vault secrets mount
+```
+```
+Path        Type       Default TTL  Max TTL  Force No Cache  Replication Behavior  Description
+cubbyhole/  cubbyhole  n/a          n/a      false           local                 per-token private secret storage
+secret/     generic    system       system   false           replicated            generic secret storage
+sys/        system     n/a          n/a      false           replicated            system endpoints used for control, policy and debugging
+```
+
+
+## Generic secret backend
+
+* store arbitrary secrets
+* mounted by default at *secret/*
+* arborescence like a virtual filesystem
+* CRUD operations
+* Writing to a key will replace the old value
+
+
+## Write data
+On CLI
+```
+$ vault write secret/password value=itsasecret
+```
+
+From file
+```
+$ vault write secret/password @data.json
+```
+
+
+## List keys
+```
+$ vault list secret
+```
+```
+Keys
+----
+password
+```
+
+
+## Read data
+Get data + metadata
+```
+$ vault read secret/password
+```
+```
+Key                 Value
+---                 -----
+refresh_interval    768h0m0s
+value               itsasecret
+```
+Get only selected key
+```
+$ vault read -field=value secret/password
+```
+```
+itsasecret
+```
+
+
+## Delete data
+```
+$ vault delete secret/password
+```
+```
+Success! Deleted 'secret/password' if it existed.
+```
+
+
+## Mount secret backend
+If path is not specified, default to backend name
+```
+$ vault secrets enable -path=/anothergenericbackend generic
+```
+```
+Successfully mounted 'generic' at '/anothergenericbackend'!
+```
 
 
 
@@ -277,120 +390,6 @@ $ vault operator seal
 ```
 ```
 Vault is now sealed.
-```
-
-
-
-## Basic CLI
-
-
-## Env
-
-Set Vault address for CLI
-```
-export VAULT_ADDR="http://vault-server:8200"
-```
-
-
-## Get vault status
-
-```
-$ vault status
-```
-```
-Sealed: false
-Key Shares: 5
-Key Threshold: 3
-Unseal Progress: 0
-Unseal Nonce: 
-Version: 0.10.0
-Cluster Name: vault-cluster-c209a2b2
-Cluster ID: 95fd6576-9e55-52b9-5c6f-017f57fbbeab
-
-High-Availability Enabled: false
-```
-
-
-## List mounted secret backends
-```
-$ vault mounts 
-```
-```
-Path        Type       Default TTL  Max TTL  Force No Cache  Replication Behavior  Description
-cubbyhole/  cubbyhole  n/a          n/a      false           local                 per-token private secret storage
-secret/     generic    system       system   false           replicated            generic secret storage
-sys/        system     n/a          n/a      false           replicated            system endpoints used for control, policy and debugging
-```
-
-
-## Generic secret backend
-
-* store arbitrary secrets
-* mounted by default at *secret/*
-* arborescence like a virtual filesystem
-* CRUD operations
-* Writing to a key will replace the old value
-
-
-## Write data
-On CLI
-```
-$ vault write secret/password value=itsasecret
-```
-
-From file
-```
-$ vault write secret/password @data.json
-```
-
-
-## List keys
-```
-$ vault list secret
-```
-```
-Keys
-----
-password
-```
-
-
-## Read data
-Get data + metadata
-```
-$ vault read secret/password
-```
-```
-Key                 Value
----                 -----
-refresh_interval    768h0m0s
-value               itsasecret
-```
-Get only selected key
-```
-$ vault read -field=value secret/password
-```
-```
-itsasecret
-```
-
-
-## Delete data
-```
-$ vault delete secret/password
-```
-```
-Success! Deleted 'secret/password' if it existed.
-```
-
-
-## Mount secret backend
-If path is not specified, default to backend name
-```
-$ vault secrets enable -path=/anothergenericbackend generic
-```
-```
-Successfully mounted 'generic' at '/anothergenericbackend'!
 ```
 
 
@@ -816,7 +815,11 @@ Code: 400. Errors:
 ## HA Backend
 
 * Consul cluster
-* DynamoDB
+
+
+## HA Archi
+
+![HA architecture](img/vault/vault-ha-archi.png)
 
 
 ## TLS certificates
