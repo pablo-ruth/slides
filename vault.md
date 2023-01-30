@@ -2,15 +2,19 @@
 
 
 
+## Theoretical part
+
+
+
 ## What is Vault
 
 * A tool for managing secrets
 * A product from Hashicorp
 * Written in Go
 * Single binary
-* Current version 0.10.1 (26/04/2018)
+* Current version 1.12.2 (30/11/2022)
 * Actively developed
-* +9000 stars on Github
+* +26000 stars on Github
 
 
 ## Why Vault
@@ -32,7 +36,7 @@
 ## Key features
 
 * Secure Secret Storage
-* Dynamic Secrets
+* Dynamic Secrets (PKI, SSH, AWS, ...)
 * Leasing, Renewal and Revocation
 * Auditing
 * Rich ACLs
@@ -51,194 +55,16 @@
 * Official
   * Go, Ruby
 * Community
-  * Java, NodeJS, PHP, Python...
+  * Python, Java, NodeJS, PHP, ...
 
 
 ## Integrations
 
-* Ansible
 * Terraform
-* Consul-template
-* Confd
+* Ansible
+* Kubernetes
 * AWS 
-* Docker
-
-
-
-## Basic CLI
-
-
-## Env
-
-Set Vault address for CLI
-```
-export VAULT_ADDR="http://vault-server:8200"
-```
-
-
-## Get vault status
-
-```
-$ vault status
-```
-```
-Sealed: false
-Key Shares: 5
-Key Threshold: 3
-Unseal Progress: 0
-Unseal Nonce: 
-Version: 0.10.0
-Cluster Name: vault-cluster-c209a2b2
-Cluster ID: 95fd6576-9e55-52b9-5c6f-017f57fbbeab
-
-High-Availability Enabled: false
-```
-
-
-## List mounted secret backends
-```
-$ vault secrets mount
-```
-```
-Path        Type       Default TTL  Max TTL  Force No Cache  Replication Behavior  Description
-cubbyhole/  cubbyhole  n/a          n/a      false           local                 per-token private secret storage
-secret/     generic    system       system   false           replicated            generic secret storage
-sys/        system     n/a          n/a      false           replicated            system endpoints used for control, policy and debugging
-```
-
-
-## Generic secret backend
-
-* store arbitrary secrets
-* mounted by default at *secret/*
-* arborescence like a virtual filesystem
-* CRUD operations
-* Writing to a key will replace the old value
-
-
-## Write data
-On CLI
-```
-$ vault write secret/password value=itsasecret
-```
-
-From file
-```
-$ vault write secret/password @data.json
-```
-
-
-## List keys
-```
-$ vault list secret
-```
-```
-Keys
-----
-password
-```
-
-
-## Read data
-Get data + metadata
-```
-$ vault read secret/password
-```
-```
-Key                 Value
----                 -----
-refresh_interval    768h0m0s
-value               itsasecret
-```
-Get only selected key
-```
-$ vault read -field=value secret/password
-```
-```
-itsasecret
-```
-
-
-## Delete data
-```
-$ vault delete secret/password
-```
-```
-Success! Deleted 'secret/password' if it existed.
-```
-
-
-## Mount secret backend
-If path is not specified, default to backend name
-```
-$ vault secrets enable -path=/anothergenericbackend generic
-```
-```
-Successfully mounted 'generic' at '/anothergenericbackend'!
-```
-
-
-
-## Architecture
-![vault_arch](img/vault/vault-arch.png)
-
-
-## 4 types of backend
-
-
-## Storage backend
-
-> A storage backend represents the location for the durable storage of Vault's information.
-
-
-## Storage backend
-
-* Filesystem
-* Consul (HA)
-* S3
-* DynamoDB (HA)
-* Mysql
-
-
-## Auth backend
-
-> Auth backends are the components in Vault that perform authentication and are responsible for assigning identity and a set of policies to a user.
-
-
-## Auth backend
-
-* Generic
-  * token
-* User oriented
-  * User/Pass, LDAP, Github
-* Machine oriented
-  * AppRole, AWS EC2, Kubernetes
-
-
-## Secret backend
-
-> Secret backends are the components in Vault which store and generate secrets. They behave very similarly to a virtual filesystem.
-
-
-## Secret backend
-
-* Generic
-* Transit
-* AWS IAM
-* Cassandra
-* PKI
-* SSH
-
-
-## Audit backend
-
-> Audit backends are the components in Vault that keep a detailed log of all requests and response to Vault.
-
-
-## Audit backend
-
-* File
-* Syslog
+* ...
 
 
 
@@ -262,28 +88,91 @@ Successfully mounted 'generic' at '/anothergenericbackend'!
 
 
 
+## Architecture
+![vault_arch](img/vault/vault-arch.png)
+
+
+## 4 types of backend
+
+
+## Storage backend
+
+> A storage backend represents the location for the durable storage of Vault's information.
+
+
+## Storage backend
+
+* Filesystem
+* Integrated Storage (HA)
+* Consul (HA)
+* DynamoDB (HA)
+
+
+## Auth backend
+
+> Auth backends are the components in Vault that perform authentication and are responsible for assigning identity and a set of policies to a user.
+
+
+## Auth backend
+
+* Generic
+  * token
+* User oriented
+  * User/Pass, LDAP, OIDC, ...
+* Machine oriented
+  * AppRole, Kubernetes, AWS EC2, ...
+* [Full list](https://developer.hashicorp.com/vault/docs/auth)
+
+
+## Secret backend
+
+> Secret backends are the components in Vault which store and generate secrets. They behave very similarly to a virtual filesystem.
+
+
+## Secret backend
+
+* Generic
+* PKI
+* SSH
+* AWS IAM
+* [Full list](https://developer.hashicorp.com/vault/docs/secrets)
+
+
+## Audit backend
+
+> Audit backends are the components in Vault that keep a detailed log of all requests and response to Vault.
+
+
+## Audit backend
+
+* File
+* Syslog
+
+
+
+## Practical part
+
+
+
 ## Config file
 
 Config file is minimal, all other params are set via API
 
 ```
-backend "file" {
-
-    path = "/srv/vault"
-
+storage "file" {
+  path = "/mnt/vault/data"
 }
 
 listener "tcp" {
-
-    address = "0.0.0.0:8200"
-    tls_disable = "true"
-
+  address     = "127.0.0.1:8200"
+  tls_disable = 1
 }
+
+ui = true
 ```
 
 
 ## Start Vault server
-
 ```
 vault server -config=/etc/vault/config.hcl
 ```
@@ -291,21 +180,56 @@ vault server -config=/etc/vault/config.hcl
 ==> Vault server configuration:
 
                      Cgo: disabled
-              Listener 1: tcp (addr: "0.0.0.0:8200", cluster address: "0.0.0.0:8201", tls: "disabled")
+              Go Version: go1.19.3
+              Listener 1: tcp (addr: "127.0.0.1:8200", cluster address: "127.0.0.1:8201", max_request_duration: "1m30s", max_request_size: "33554432", tls: "disabled")
                Log Level: info
                    Mlock: supported: true, enabled: true
+           Recovery Mode: false
                  Storage: file
-                 Version: Vault v0.10.0
-             Version Sha: 614deacfca3f3b7162bbf30a36d6fc7362cd47f0
+                 Version: Vault v1.12.2, built 2022-11-23T12:53:46Z
+             Version Sha: 415e1fe3118eebd5df6cb60d13defdc01aa17b03
+
+==> Vault server started!
+```
+
+
+## Set server address
+
+Set Vault address for CLI
+```
+export VAULT_ADDR="http://vault-server:8200"
+```
+
+
+## Get vault status
+
+```
+$ vault status
+```
+```
+Key                Value
+---                -----
+Seal Type          shamir
+Initialized        true
+Sealed             true
+Total Shares       2
+Threshold          2
+Unseal Progress    0/2
+Unseal Nonce       n/a
+Version            1.12.2
+Build Date         2022-11-23T12:53:46Z
+Storage Type       file
+HA Enabled         false
 ```
 
 
 
 ## Initialization
 
+* One-time operation
 * Uses Shamir's secret sharing algorithm
-* Split the master key into 5 shares
-* Threshold of 3 to reconstruct the master key
+* Split the master key into 5 shares (default)
+* Threshold of 3 to reconstruct the master key (default)
 * Master key is used to protect the encryption key
 
 
@@ -316,25 +240,13 @@ vault server -config=/etc/vault/config.hcl
 ## Initialization
 
 ```
-$ vault init
+$ vault operator init -key-shares=2 -key-threshold=2
 ```
 ```
-Unseal Key 1: 6kGTk+gIEz8PyNGsx/TWSm/8yKQdn/qcmsJG1SO4RM8B
-Unseal Key 2: 3F2MaXjCrDfdr6RhKQgY5DcFxZOatHDFXq5XS49rcHkC
-Unseal Key 3: IAo452DivgYFxHb6JyLIfhNL1Z/si1M46py7rCbMTgkD
-Unseal Key 4: PTknIi15Ugtx/jZsz1eY1GNrFlLmOwE9wqSzRqtzrbAE
-Unseal Key 5: wW6TrDVZQDqpleT3wX1ITkclBl6QBCLAdpZfoQLUk8AF
-Initial Root Token: 16e8ea9e-ebac-53ad-4043-22a5e9c610d2
-```
+Unseal Key 1: KzD/kDk3Yi36oLoe/NEpO2hrj9JNzj7Hnt/HQZV3vGGI
+Unseal Key 2: 63254v1iWYVMjTKN+NmAVszgvHI144dcIdaMvu9auBW2
 
-
-## Initialization
-
-We can use PGP to protect unseal keys
-
-```
-$ vault init -key-shares=3 -key-threshold=2 \
-             -pgp-keys="jeff.asc,vishal.asc,seth.asc"
+Initial Root Token: hvs.c5Ru2hXKOuYJEzP62dgSH1tF
 ```
 
 
@@ -346,33 +258,38 @@ $ vault init -key-shares=3 -key-threshold=2 \
 
 ## Unseal
 
+* Needed each time a Vault server is restarted
 * Vault starts in a sealed state
 * Almost no operations are possible when sealed
 * We need to unseal with threshold number of keys
+* Can be automated when deployed on cloud provider (AWS KMS)
 
 
 ## Unseal
 
 ```
 $ vault operator unseal
-Key (will be hidden): 
 ```
 ```
-Sealed: true
-Key Shares: 5
-Key Threshold: 3
-Unseal Progress: 1
-Unseal Nonce: 04130de4-08d5-8dc0-d0c9-684c2cb3cc18
+Key                Value
+---                -----
+Seal Type          shamir
+Sealed             true
+Total Shares       2
+Threshold          2
+Unseal Progress    1/2
+Unseal Nonce       0b2b953b-826b-2b66-4f59-791cabd43c4f
 ```
 ```
 $ vault operator unseal
-Key (will be hidden): 
 ```
 ```
-Sealed: false
-Key Shares: 5
-Key Threshold: 3
-Unseal Progress: 0
+Key             Value
+---             -----
+Seal Type       shamir
+Sealed          false
+Total Shares    2
+Threshold       2
 ```
 
 
@@ -409,13 +326,22 @@ Vault is now sealed.
 
 ```
 $ vault login
-Token (will be hidden):
+Token (will be hidden): 
 ```
 ```
-Successfully authenticated! You are now logged in.
-token: 16e8ea9e-ebac-53ad-4043-22a5e9c610d2
-token_duration: 0
-token_policies: [root]
+Success! You are now authenticated. The token information displayed below
+is already stored in the token helper. You do NOT need to run "vault login"
+again. Future Vault requests will automatically use this token.
+
+Key                  Value
+---                  -----
+token                hvs.c5Ru2hXKOuYJEzP62dgSH1tF
+token_accessor       5nSipCdigv8oNJ3ERgNeMM5y
+token_duration       ∞
+token_renewable      false
+token_policies       ["root"]
+identity_policies    []
+policies             ["root"]
 ```
 
 
@@ -434,18 +360,35 @@ token_policies: [root]
 * orphan token with others authentication backends
 
 
-## Userpass
-
-* user-oriented
-* username and password combination
-* local accounts
-
-
 ## LDAP
 
 * user-oriented
 * using an existing LDAP credentials
 * mapping of groups and users to policies
+
+
+## LDAP
+
+```
+$ vault login -method=ldap username="my_ldap_user"
+Password (will be hidden): 
+```
+```
+Success! You are now authenticated. The token information displayed below
+is already stored in the token helper. You do NOT need to run "vault login"
+again. Future Vault requests will automatically use this token.
+
+Key                    Value
+---                    -----
+token                  hvs.CAESIBvxGS3kdMNg7vgj_ny7JQJd4Ad85IMN4NJ9GOJMfQhzGh4KHGh2cy5ydm41WGFtWG9LckNRQzluVnpuZVlQbHo
+token_accessor         JtY2aeS0J89GLghzqItroM6f
+token_duration         12h
+token_renewable        true
+token_policies         ["default" "policy-vault-admin"]
+identity_policies      []
+policies               ["default" "policy-vault-admin"]
+token_meta_username    my_ldap_user
+```
 
 
 ## AppRoles
@@ -457,20 +400,292 @@ token_policies: [root]
 * CIDR list
 
 
-## AWS EC2
+## Kubernetes
 
-* EC2 instances have access to metadata
-* AWS also provides PKCS#7 signature
-* AWS public keys used to verify the signature
-* verifies the running status of the instance
-* Trust On First Use (TOFU) with instance ID
-* bind tags and/or AMI id to Vault policies
+* Pods avec access to service account JWT token
+* Call Kubernetes Review API
+* Bound role only on specific service account and namespace
+
+
+
+## Basic CLI
+
+
+## Wrapper for REST requests
+
+* API: [Documentation](https://developer.hashicorp.com/vault/api-docs)
+* CRUD operations matching REST verbs
+
+
+## List mounted secret backends
+```
+$ vault secrets list
+```
+```
+Path          Type         Accessor              Description
+----          ----         --------              -----------
+cubbyhole/    cubbyhole    cubbyhole_8ea9b5c2    per-token private secret storage
+identity/     identity     identity_9273abbc     identity store
+secret/       kv           kv_0ffc4d2b           key/value secret storage
+sys/          system       system_672f0123       system endpoints used for control, policy and debugging
+```
+
+
+## Write data
+On CLI
+```
+$ vault write cubbyhole/password value=itsasecret
+```
+
+With CURL
+```
+$ curl -X POST -H "X-Vault-Token: $TOKEN" \
+    $VAULT_ADDR/v1/cubbyhole/password -d '{"value":"itsasecret"}'
+```
+
+
+## List keys
+On CLI
+```
+$ vault list cubbyhole/
+```
+```
+Keys
+----
+password
+```
+
+With CURL
+```
+$ curl -X LIST -H "X-Vault-Token: $TOKEN" \
+    $VAULT_ADDR/v1/cubbyhole/
+```
+```
+{"request_id":"51ac4e13-d6bd-c5d9-126b-08530cd93c2d","lease_id":"","renewable":false,"lease_duration":0,"data":{"keys":["password"]},"wrap_info":null,"warnings":null,"auth":null}
+```
+
+
+## Read data
+On CLI
+```
+$ vault read cubbyhole/password
+```
+```
+Key                 Value
+---                 -----
+refresh_interval    768h0m0s
+value               itsasecret
+```
+
+With CURL
+```
+$ curl -X GET -H "X-Vault-Token: $TOKEN" \
+    $VAULT_ADDR/v1/cubbyhole/password
+```
+```
+{"request_id":"e040721f-2be5-0ae6-e1b0-f36f7b45bdb8","lease_id":"","renewable":false,"lease_duration":0,"data":{"value":"itsasecret"},"wrap_info":null,"warnings":null,"auth":null}
+```
+
+
+## Delete data
+On CLI
+```
+$ vault delete cubbyhole/password
+```
+```
+Success! Data deleted (if it existed) at: cubbyhole/password
+```
+
+With CURL
+```
+$ curl -X DELETE -H "X-Vault-Token: $TOKEN" \
+      $VAULT_ADDR/v1/cubbyhole/password
+```
+
+
+## Call other API path
+
+Commands can be used for any API call
+
+Ex for AppRole login:
+```
+vault write auth/approle/login \
+    role_id=efe401fb-xxxx-xxxx-xxxx-xxxxxxxxxxxx \
+    secret_id=af4cf7d8-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+```
+```
+Key                     Value
+---                     -----
+token                   hvs.CAESIC7WTY0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+token_accessor          CwPaJ9xxxxxxxxxxxxx
+token_duration          10h
+token_renewable         true
+token_policies          ["default" "approle-myapp-policy"]
+identity_policies       []
+policies                ["default" "approle-myapp-policy"]
+token_meta_role_name    myapp
+```
+
+
+## Generic secret backend v2
+
+* Like KV1 but with versioning
+* Specific API path
+  * data (read, write, delete specific version)
+  * metadata (list, versions, delete key+versions)
+* Specific vault CLI commands
+
+
+## Write data on KV2
+
+* Create secret if it doesn't exist
+* Create a new version of secret if it exist
+
+
+## Write data on KV2
+On CLI
+```
+$ vault kv put kv/folder/password value=itsasecret
+```
+```
+===== Secret Path =====
+kv/data/folder/password
+
+======= Metadata =======
+Key                Value
+---                -----
+created_time       2023-01-26T14:09:37.061548012Z
+custom_metadata    <nil>
+deletion_time      n/a
+destroyed          false
+version            1
+```
+
+
+## Write data on KV2
+
+With CURL
+```
+$ curl -X POST -H "X-Vault-Token: $TOKEN" \
+    $VAULT_ADDR/v1/kv/data/folder/password \
+    -d '{"data":{"value":"itsasecret"}}'
+```
+```
+{
+  "request_id": "f2fb5675-4e07-25bf-45df-3a56188a7613",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "created_time": "2023-01-26T14:10:40.759415379Z",
+    "custom_metadata": null,
+    "deletion_time": "",
+    "destroyed": false,
+    "version": 2
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+
+## Read data on KV2
+
+* Read latest version by default
+* Can specify a version
+
+
+## Read data on KV2
+
+On CLI
+```
+$ vault kv get -version=1 kv/folder/password
+```
+```
+===== Secret Path =====
+kv/data/folder/password
+
+======= Metadata =======
+Key                Value
+---                -----
+created_time       2023-01-26T14:10:35.975915498Z
+custom_metadata    <nil>
+deletion_time      n/a
+destroyed          false
+version            1
+
+==== Data ====
+Key      Value
+---      -----
+value    itsasecret
+```
+
+
+## Read data on KV2
+
+With CURL
+```
+curl -X GET -H "X-Vault-Token: $TOKEN" \
+  $VAULT_ADDR/v1/kv/data/folder/password?version=1 
+```
+```
+{
+  "request_id": "1730fee5-34ec-bafb-44ca-7462e4cffa34",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "data": {
+      "value": "itsasecret"
+    },
+    "metadata": {
+      "created_time": "2023-01-26T14:10:35.975915498Z",
+      "custom_metadata": null,
+      "deletion_time": "",
+      "destroyed": false,
+      "version": 1
+    }
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+
+## Delete data on KV2
+
+* Delete latest version
+```
+vault kv delete kv/folder/password
+```
+```
+Data deleted at: kv/data/folder/password
+```
+
+* Delete key and all versions
+```
+vault kv metadata delete kv/folder/password
+```
+```
+Data deleted at: kv/metadata/folder/password
+```
+
+
+## Delete data on KV2
+
+With CURL
+```
+curl -X DELETE -H "X-Vault-Token: $TOKEN" \
+  $VAULT_ADDR/v1/kv/metadata/folder/secret
+```
 
 
 
 ## Audit
 
-* File or syslog
+* File, syslog or socket
 * Log every single action in Vault
 
 ```
@@ -494,30 +709,55 @@ $ vault audit enable file file_path=/var/log/vault_audit.log
 ## Capabilities
 
 * Fine-grained control over operations
-  * create
-  * read
-  * update
-  * delete
-  * list
-  * sudo
+  * create (POST/PUT)
+  * read (GET)
+  * update (POST/PUT)
+  * delete (DELETE)
+  * list (LIST)
+  * sudo (root-protected paths)
   * deny
 
 
 ## Policy
 
-Group of ACLs to applied to users
+Group of ACLs
 
 ```
+# Full subpath
 path "secret/*" {
   capabilities = ["read", "create", "update", "delete", "list"]
 }
 
+# Specific path only
 path "secret/app/db" {
   capabilities = ["read"]
 }
 
+# System path
 path "auth/token/lookup-self" {
   capabilities = ["read"]
+}
+```
+
+
+## Policy
+
+KV2 ACLs
+
+```
+# Data access
+path "kv/data/folder/subfolder/*" {
+  capabilities = ["create", "update", "read"]
+}
+
+# Delete last version
+path "kv/data/folder/subfolder/*" {
+  capabilities = ["delete"]
+}
+
+# List keys, delete key + all versions
+path "kv/metadata/folder/subfolder/*" {
+  capabilities = ["list", "delete"]
 }
 ```
 
@@ -534,6 +774,74 @@ Apply a policy to LDAP group
 ```
 $ vault write auth/ldap/groups/myldapgroup policies=secret
 ```
+
+
+
+## HA
+
+
+## Integrated Storage
+
+* Storage without external backend (Consul, Etcd, ...)
+* Raft election
+* Raft log to store data
+* Uniq node_id and cluster_addr
+
+```
+backend "raft" {
+  path = "/projet/data/vault/"
+  node_id = "q1vault01"
+}
+
+cluster_addr = "https://q1vault01.ouest-france.fr:8201"
+api_addr = "https://lb.ouest-france.fr:8200"
+```
+
+
+## List peers
+
+```
+vault operator raft list-peers
+```
+```
+Node     Address                   State       Voter
+----     -------                   -----       -----
+node1    node1.vault.local:8201    follower    true
+node2    node2.vault.local:8201    follower    true
+node3    node3.vault.local:8201    leader      true
+```
+
+
+## Join peer
+
+```
+vault operator raft join https://node1.vault.local:8200
+```
+
+
+
+# Disaster recovery
+
+
+## Backup
+
+* Snapshot Vault raft log to file
+
+```
+vault operator raft snapshot save backup.snap
+```
+
+
+## Restore
+
+* Bring cluster online reinitialized
+* Copy raft snapshot file
+* Restore snapshot from file
+
+```
+vault operator raft snapshot restore -force backup.snap
+```
+* Unseal Vault with existing unseal keys
 
 
 
@@ -587,262 +895,3 @@ $ vault write internalca/roles/example-fr \
 $ vault write internalca/issue/example-fr \
                         common_name=test.example.fr
 ```
-
-
-
-## SSH
-
-
-## One-Time-Password
-
-* issue an OTP every time a client wants to SSH
-* remote host ask vault for verification 
-* vault helper for client/server
-* very detailed audit
-
-
-## SSH CA
-
-* Certificate authority for ssh
-* Can sign client and host keys
-* Openssh feature since 5.6 (08/2010)
-
-
-## CA architecture
-
-![ca architecture](img/vault/bastion-ca.png)
-
-
-## SSH CA
-
-* Used by big companies (Facebook, Netflix, ...)
-* Scalable
-  * No need for hosts to talk with CA
-* Single point of trust
-* Precise right management
-* Detailed audit
-
-
-## SSH CA
-
-* CA signing key is generated
-* private half of signing key stays within Vault
-* public half is exposed via the API
-* each mount represents a unique signing key pair
-* use different keys to sign hosts and clients
-
-
-## Sign client keys
-
-Mount SSH CA backend
-
-```
-$ vault mount -path ssh-client-signer ssh
-```
-
-Create CA keypair in Vault
-
-```
-$ vault write -f ssh-client-signer/config/ca
-```
-
-Push public CA cert to SSH hosts
-
-```
-$ vault read -field=public_key ssh/config/ca > /etc/ssh/ca.pem
-```
-
-Add *TrustedUserCAKeys* param to *sshd_config*
-
-```
-TrustedUserCAKeys /etc/ssh/ca.pem
-```
-
-
-## Create role
-
-Logical name that maps to a policy
-
-```
-vault write ssh-client-signer/roles/sign-user-role @clientrole.json
-```
-
-```
-{
-  "allow_user_certificates": true,
-  "allowed_users": "*",
-  "default_extensions": [
-    {
-      "no-agent-forwarding": "no"
-    }
-  ],
-  "key_type": "ca",
-  "default_user": "root",
-  "ttl": "30m0s"
-}
-```
-
-
-## Sign client keys
-
-* Sign client cert *id_rsa.pub*
-* Automatically detected by openssh in *id_rsa-cert.pub*
-* Principals auth default to username
-
-```
-$ vault write \
-  ssh/sign/sign-user-role 
-  valid_principals=root
-  ttl=1h
-  public_key=-
-```
-
-
-## Display certificate
-
-```
-$ ssh-keygen -Lf id_ecdsa-cert.pub
-id_ecdsa-cert.pub:
-  Type: ecdsa-sha2-nistp256-cert-v01@openssh.com user certificate
-  Public key: ECDSA-CERT ...
-  Signing CA: ECDSA ...
-  Key ID: "pruth"
-  Serial: 1
-  Valid: from 2017-04-13T15:26:00 to 2017-04-20T15:27:00
-  Principals:
-    root
-  Critical Options: (none)
-  Extensions:
-    permit-X11-forwarding
-    permit-agent-forwarding
-```
-
-
-## Advanced principals
-
-Allow arbitrary list of principals (zones) in *sshd_config*
-
-```
-AuthorizedPrincipalsFile /etc/ssh/auth_principals/%u
-```
-
-```
-$ echo -e 'zone-webservers\nroot-everywhere' > \
-                      /etc/ssh/auth_principals/root
-```
-
-
-
-## Response Wrapping
-
-
-## Cubbyhole secret backend
-
-* mounted at the *cubbyhole/* prefix
-* cannot be mounted elsewhere or removed
-* paths are scoped per token
-* allow response wrapping
-
-
-## Wrapping
-
-* original response is serialized to JSON
-* new single-use token is generated
-* original response JSON is stored in the single-use token's cubbyhole
-* new response is generated, with the token ID
-* new response is returned to the caller
-
-
-## Wrapping
-
-Ask vault to wrap the response in a token
-
-```
-$ vault read -wrap-ttl="1m" secret/hello
-```
-```
-Key                             Value
----                             -----
-wrapping_token:                 c67e2c39-37d6-6bca-4759-32db53425c2a
-wrapping_token_ttl:             1m0s
-wrapping_token_creation_time:   2017-04-26 11:48:08.727174793 +0000 UTC
-```
-
-
-## Unwrapping
-
-* read to sys/wrapping/unwrap with wrapping token ID
-* original value will be returned
-* if original response is an authentication, token's accessor will be made available
-
-
-## Unwrapping
-
-Ask vault to unwrap the token
-
-```
-$ vault unwrap c67e2c39-37d6-6bca-4759-32db53425c2a
-```
-```
-Key                     Value
----                     -----
-refresh_interval        768h0m0s
-value                   world
-```
-
-
-## Wrapping / Unwrapping
-
-A token is single-use
-
-```
-$ vault unwrap c67e2c39-37d6-6bca-4759-32db53425c2a
-```
-```
-Error making API request.
-
-URL: PUT http://vault-server:8200/v1/sys/wrapping/unwrap
-Code: 400. Errors:
-
-* wrapping token is not valid or does not exist
-```
-
-
-
-## Production
-
-
-## HA Backend
-
-* Consul cluster
-
-
-## HA Archi
-
-![HA architecture](img/vault/vault-ha-archi.png)
-
-
-## TLS certificates
-
-Add TLS to API
-```
-listener "tcp" {
-
-  address = "0.0.0.0:8200"
-  tls_cert_file = "/etc/vault/vault.crt"
-  tls_key_file  = "/etc/vault/vault.key"
-
-}
-```
-
-
-## Ephemeral root tokens
-
-* No root token after init
-* Create and revoke when necessary
-
-
-## Key rotation
-
-* Encryption key rotation
-* Master key rotation
