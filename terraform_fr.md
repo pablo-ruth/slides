@@ -1,4 +1,5 @@
 ## Infrastructure as Code
+## (Terraform)
 
 
 
@@ -678,14 +679,3 @@ resource "aws_instance" "example" {
 
 
 ## FIN
-
-
-
-## Créer inventaire ansible
-
-foo
-
-## TP 15
-
-* Créer la VM BDD
-* Créer une entrée prenomweb.formation.wpg-hosting.fr

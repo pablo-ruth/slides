@@ -430,4 +430,29 @@ role_name/
 
 
 
+## Handlers
+
+* Tâches déclenchées uniquement lorsque nécéssaire
+* Appelés via l'option notify dans une tâche
+* Exécutés une seule fois après la fin du playbook
+* Utiles pour la gestion des services
+
+```
+# roles/myrole/handlers/main.yml
+- name: Restart nginx
+  systemd:
+    name: nginx
+    state: restarted
+```
+
+```
+- name: Copier le fichier de configuration Nginx pour WordPress
+  template:
+    src: templates/wordpress.conf.j2
+    ...
+  notify:
+    - Restart nginx
+```
+
+
 ## FIN
