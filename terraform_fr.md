@@ -593,6 +593,14 @@ module "instance_a" {
 ```
 
 
+
+## TP 7
+
+* Migrer le Terraform de création d'instance en module
+
+
+
+
 ## Boucle
 
 
