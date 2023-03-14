@@ -68,8 +68,6 @@
 
 ## Node masters
 
-* Nodes principaux du cluster
-* Responsables de la gestion de l'ensemble du cluster
 * Exécutent les composants de contrôle
 * Composants sytème:
   - API server
@@ -588,7 +586,116 @@ spec:
 
 
 
-## Helm
+## Volumes
 
-+ network policy
-+ volumes
+* Permet aux conteneurs d'accéder à des fichiers stockées en dehors de leur propre système de fichiers
+* Utilisés pour stocker des données d'application ou de configuration
+* Grande flexibilité en matière de stockage de données pour les applications conteneurisées
+
+
+## Types de volumes
+
+* emptyDir : temporaires, dossier sur le node, créés et détruits avec le pod
+* hostPath : montent un répertoire du node
+* ConfigMap : données de configuration
+* Secret : données sensibles de configuration
+*
+* PersistentVolumeClaim : volumes qui sont créés et gérés en dehors du cluster
+
+
+## emptyDir
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+  - name: my-container
+    image: nginx
+    volumeMounts:
+    - name: my-volume
+      mountPath: /data
+  volumes:
+  - name: my-volume
+    emptyDir: {}
+```
+
+
+## ConfigMap (cm)
+
+```
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-volume
+data:
+  my-config-file.conf: |
+    server {
+      listen 80;
+      server_name example.com;
+      location / {
+        root /usr/share/nginx/html;
+        index index.html;
+      }
+    }
+```
+
+
+## ConfigMap (mount)
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+  - name: my-container
+    image: nginx
+    volumeMounts:
+    - name: config-volume
+      mountPath: /etc/config
+  volumes:
+  - name: config-volume
+    configMap:
+      name: my-config
+```
+
+
+## PVC (pvc)
+
+```
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+
+## Mount (pvc)
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+  - name: my-container
+    image: nginx
+    volumeMounts:
+    - name: data
+      mountPath: /data
+  volumes:
+  - name: data
+    persistentVolumeClaim:
+      claimName: my-pvc
+```
